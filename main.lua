@@ -44,3 +44,33 @@ MESSAGES = [[
     FOREIGN KEY (post_id) REFERENCES Posts(ID)
   );
 ]]
+
+function InitDb()
+    db:exec(USERS)
+    db:exec(POSTS)
+    db:exec(LIKES)
+    db:exec(MESSAGES)
+end
+
+InitDb()
+
+Handlers.add("NedProtocol.RegisterUser",
+
+    function(msg)
+        return msg.Action == "RegisterUser"
+    end,
+
+    function(msg)
+        local authorCount = #dbAdmin:exec(string.format([[SELECT * FROM Authors WHERE PID = "%s";]], msg.From))
+        if authorCount > 0 then
+            Send({Target = msg.From, Action = "Registered", Data = "Already registered"})
+            print("Author already registered")
+            return "Already Registered"
+        end
+        local Name = msg.Name or 'anon'
+        dbAdmin:exec(string.format([[INSERT INTO Authors (PID, Name) VALUES ("%s", "%s");]], msg.From, Name))
+        Send({Target = msg.From, Action = "NedProtocol.Registered", Data = "Successfully Registered."})
+        print("Registered " .. Name)
+    end
+
+)
