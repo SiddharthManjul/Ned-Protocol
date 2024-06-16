@@ -19,8 +19,9 @@ POSTS = [[
     PID TEXT,
     Title TEXT,
     Body TEXT,
+    Image TEXT
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (PID) REFERENCES Authors(PID)
+    FOREIGN KEY (PID) REFERENCES Userss(PID)
   );
 ]]
 
@@ -61,16 +62,47 @@ Handlers.add("NedProtocol.RegisterUser",
     end,
 
     function(msg)
-        local authorCount = #dbAdmin:exec(string.format([[SELECT * FROM Authors WHERE PID = "%s";]], msg.From))
-        if authorCount > 0 then
+        local userCount = #dbAdmin:exec(string.format([[SELECT * FROM Users WHERE PID = "%s";]], msg.From))
+        if userCount > 0 then
             Send({Target = msg.From, Action = "Registered", Data = "Already registered"})
-            print("Author already registered")
+            print("User already registered")
             return "Already Registered"
         end
         local Name = msg.Name or 'anon'
-        dbAdmin:exec(string.format([[INSERT INTO Authors (PID, Name) VALUES ("%s", "%s");]], msg.From, Name))
+        dbAdmin:exec(string.format([[INSERT INTO Users (PID, Name) VALUES ("%s", "%s");]], msg.From, Name))
         Send({Target = msg.From, Action = "NedProtocol.Registered", Data = "Successfully Registered."})
         print("Registered " .. Name)
     end
 
+)
+
+-- Function to convert image into base64 string
+local base64 = require(".base64")
+local function ConvertToBase64(Data)
+    return base64.encode(Data)
+end
+
+Handlers.add("NedProtocol.CreatePost",
+
+    function(msg)
+        return msg.Action == "CreatePost"
+    end,
+
+    function(msg)
+        local user = dbAdmin:exec(string.format([[SELECT PID, Name FROM Users WHERE PID = "%s";]], msg.From))[1]
+        if user then
+            local base64Image = ""
+            if msg.ImagePath then
+                local imageData = readFile(msg.ImagePath)
+                base64Image = ConvertToBase64(imageData)
+            end
+            dbAdmin:exec(string.format([[INSERT INTO Posts (ID, PID, Title, Body, Image) VLAUES ("%s", "%s", "%s", "%s", "%s");]],
+                msg.Id, user.PID, msg.Title, msg.Data, msg.base64Image))
+            Send({Target = msg.From, Data = "Write-up Posted."})
+            print("New Write-up Posted.")
+        else 
+            Send({Target = msg.From, Data = "Not Registered"})
+            print("Not Registered as Writer, can't post!")
+        end
+    end
 )
