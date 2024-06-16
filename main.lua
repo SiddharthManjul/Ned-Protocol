@@ -115,9 +115,24 @@ Handlers.add("NedProtocol.GetPosts",
 
     function(msg)
         local posts = dbAdmin:exec([[
-            SELECT p.ID, p.Title, u.Name as "User" FROM Posts p LEFT OUTER JOIN Users u ON p.ID = u.ID;
+            SELECT p.ID, p.Title, u.Name as "User" FROM Posts p LEFT OUTER JOIN Users u ON p.PID = u.PID;
         ]])
         print("Listing " ..#posts .. " posts")
         Send({Target = msg.From, Action = "NedProtocol.Posts", Data = require('json').encode(posts)})
+    end
+)
+
+Handlers.add("NedProtocol.GetPost",
+
+    function(msg)
+        return msg.Action == "GetPost"
+    end,
+
+    function(msg)
+        local post = dbAdmin:exec(string.format([[
+            SELECT p.ID, p.TITLE, u.Name as "User", p.Body, p.Image FROM Posts p LEFT OUTER JOIN Users u ON p.PID = u.PID WHERE p.ID = "%s";
+        ]], msg["Post-Id"]))[1]
+        Send({Target = msg.From, Action = "Get-Response", Data = require('json').encode(post)})
+        print(post)
     end
 )
