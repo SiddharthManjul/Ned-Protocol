@@ -106,3 +106,18 @@ Handlers.add("NedProtocol.CreatePost",
         end
     end
 )
+
+Handlers.add("NedProtocol.GetPosts",
+
+    function(msg)
+        return msg.Action == "GetPosts"
+    end,
+
+    function(msg)
+        local posts = dbAdmin:exec([[
+            SELECT p.ID, p.Title, u.Name as "User" FROM Posts p LEFT OUTER JOIN Users u ON p.ID = u.ID;
+        ]])
+        print("Listing " ..#posts .. " posts")
+        Send({Target = msg.From, Action = "NedProtocol.Posts", Data = require('json').encode(posts)})
+    end
+)
