@@ -1,50 +1,46 @@
--- Load dbAdmin module
+-- aos process: G1qe3_tQIIZRqUKMiRaQz4-jrefPyft4ng3TXRor2So
 
-local function _load()
-    local dbAdmin = {}
-    dbAdmin.__index = dbAdmin
-    -- Function to create a new database explorer instance
-    function dbAdmin.new(db)
-        local self = setmetatable({}, dbAdmin)
-
-        self.db = db
-        return self
-    end
-
-    -- Function to list all tables in the database
-    function dbAdmin:tables()
-        local tables = {}
-        for row in self.db:nrows("SELECT name FROM sqlite_master WHERE type='table';") do
-            table.insert(tables, row.name)
-        end
-        return tables
-    end
-
-    -- Function to get the record count of a table
-    function dbAdmin:count(tableName)
-        local count_query = string.format("SELECT COUNT(*) AS count FROM %s;", tableName)
-        for row in self.db:nrows(count_query) do
-            return row.count
-        end
-    end
-
-    -- Function to execute a given SQL query
-    function dbAdmin:exec(sql)
-        local results = {}
-        for row in self.db:nrows(sql) do
-            table.insert(results, row)
-        end
-        return results
-    end
-
-    return dbAdmin
-end
-
-_G.package.loaded["DbAdmin"] = _load()
-
--- Create SQLite DB
 local sqlite3 = require('lsqlite3')
 db = db or sqlite3.open_memory()
-dbAdmin = require('DbAdmin').new(db)
+dbAdmin = require('@rakis/DbAdmin').new(db)
 
-return "OK"
+
+-- Database schema
+USERS = [[
+  CREATE TABLE IF NOT EXISTS Users (
+    PID TEXT PRIMARY KEY,
+    Name TEXT
+  );
+]]
+
+POSTS = [[
+  CREATE TABLE IF NOT EXISTS Posts (
+    ID TEXT PRIMARY KEY,
+    PID TEXT,
+    Title TEXT,
+    Body TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (PID) REFERENCES Authors(PID)
+  );
+]]
+
+LIKES = [[
+  CREATE TABLE IF NOT EXISTS Likes (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id TEXT,
+    user_id TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES Posts(ID)
+  );
+]]
+
+MESSAGES = [[
+  CREATE TABLE IF NOT EXISTS Messages (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id TEXT,
+    user_id TEXT,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES Posts(ID)
+  );
+]]
