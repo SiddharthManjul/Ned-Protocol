@@ -10,6 +10,7 @@ USERS = [[
   CREATE TABLE IF NOT EXISTS Users (
     PID TEXT PRIMARY KEY,
     Name TEXT
+    Username TEXT
   );
 ]]
 
@@ -68,8 +69,9 @@ Handlers.add("NedProtocol.RegisterUser",
             print("User already registered")
             return "Already Registered"
         end
+        local Username = msg.Username .. ".ned"
         local Name = msg.Name or 'anon'
-        dbAdmin:exec(string.format([[INSERT INTO Users (PID, Name) VALUES ("%s", "%s");]], msg.From, Name))
+        dbAdmin:exec(string.format([[INSERT INTO Users (PID, Name, Username) VALUES ("%s", "%s", "%s");]], msg.From, Name, Username))
         Send({Target = msg.From, Action = "NedProtocol.Registered", Data = "Successfully Registered."})
         print("Registered " .. Name)
     end
@@ -136,3 +138,17 @@ Handlers.add("NedProtocol.GetPost",
         print(post)
     end
 )
+
+Handlers.add("NedProtocol.LikePost",
+
+    function(msg)
+        return msg.Action == "LikePost"
+    end,
+
+    function(msg)
+        dbAdmin:exec(string.format([[INSERT INTO Likes (post_id, user_id) VALUES ("%s", "%s");]], msg.post_id, msg.user_id))
+        Send({Target = msg.From, Action = "Like", Data = "Post Liked Successfully"})
+        print("Post Liked Successfully")
+    end
+)
+
