@@ -1,4 +1,4 @@
--- aos process: G1qe3_tQIIZRqUKMiRaQz4-jrefPyft4ng3TXRor2So
+-- aos process: p8NeaI59y_pSs8WkNuZyF5-pqTrvW2wMGBew95FMZV4
 
 local sqlite3 = require('lsqlite3')
 db = db or sqlite3.open_memory()
@@ -152,3 +152,55 @@ Handlers.add("NedProtocol.LikePost",
     end
 )
 
+Handlers.add("NedProtocol.GetLikes",
+
+    function(msg)
+        return msg.Action == "GetLikes"
+    end,
+
+    function(msg)
+        local likes = dbAdmin:exec(string.format([[SELECT COUNT(*) as count FROM Likes WHERE post_id = "%s";]], msg.post_id))[1]
+        Send({Target = msg.From, Action = "Likes", Data = require('json').encode(likes)})
+        print("Likes retrieved successfully")
+    end
+)
+
+Handlers.add("NedProtocol.CreateMessage",
+
+    function(msg)
+        return msg.Action == "CreateMessage"
+    end,
+
+    function(msg)
+        dbAdmin:exec(string.format([[INSERT INTO Messages (post_id, user_id, content) VALUES ("%s", "%s", "%s");]],
+            msg.post_id, msg.user_id, msg.content))
+        Send({ Target = msg.From, Action = "Message-Response", Data = "Message created successfully" })
+        print("Message created successfully")
+    end
+)
+
+Handlers.add("LearnShare.GetMessages",
+    function(msg)
+        return msg.Action == "GetMessages"
+    end,
+    function(msg)
+        local messages = dbAdmin:exec(string.format([[SELECT * FROM Messages WHERE post_id = "%s";]], msg.post_id))
+        Send({ Target = msg.From, Action = "Messages-Response", Data = require('json').encode(messages) })
+        print("Messages retrieved successfully")
+    end
+)
+
+-- Broadcast to Chatroom Members
+Handlers.add("LearnShare.BroadcastMessage",
+    function(msg)
+        return msg.Action == "BroadcastMessage"
+    end,
+    function(msg)
+        local members = dbAdmin:exec(string.format([[SELECT user_id FROM Messages WHERE post_id = "%s";]], msg.post_id))
+        for _, member in ipairs(members) do
+            aos.send({ Target = member.user_id, Data = msg.Data })
+        end
+        Send({ Target = msg.From, Action = "Broadcast-Response", Data = "Broadcasted successfully" })
+        print("Broadcasted successfully")
+    end
+)
